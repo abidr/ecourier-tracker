@@ -1,5 +1,5 @@
 === Plugin Name ===
-Contributors: (this should be a list of wordpress.org userid's)
+Contributors: abidnnt
 Donate link: https://github.com/abidr
 Tags: tracker, ecourier, woocommerce
 Requires at least: 3.0.1
