@@ -69,14 +69,11 @@ function ecourier_tracker_view_order( $order_id ){
 
 $ecourier_tracker_order = wc_get_order( $order_id );
 $ecourier_tracker_order_id = $ecourier_tracker_order->get_id(); 
-$ecourier_tracker_order_method = $ecourier_tracker_order->get_shipping_method(); 
-$ecourier_tracker_order_status = $ecourier_tracker_order->get_status();
 $ecourier_tracker_options = get_option( 'ecourier_tracker_option_name' );
+$ecourier_delivery_confirmation = get_post_meta($ecourier_tracker_order_id, 'ecourier_tracking_delivered_through_ecourier', true); 
 $ecourier_api_key = $ecourier_tracker_options['api_key_0'];
 $ecourier_secret_key = $ecourier_tracker_options['secret_key_1'];
 $ecourier_user_id = $ecourier_tracker_options['user_id_2'];
-$ecourier_delivery_confirmation = get_post_meta($ecourier_tracker_order_id, 'ecourier_tracking_delivered_through_ecourier', true); 
-
 
 $ecourier_response = wp_remote_get( 
 	'https://ecourier.com.bd/apiv2/?parcel=track&product_id=' . $ecourier_tracker_order_id, 
@@ -94,7 +91,6 @@ $ecourier_body = wp_remote_retrieve_body( $ecourier_response );
 $ecourier_data = json_decode( $ecourier_body, true );
 
 $ecourier_statuses = $ecourier_data['query_data'][0]['status'];
-
 
 ?>
 <?php if($ecourier_delivery_confirmation == true){ ?>
@@ -152,22 +148,142 @@ add_action( 'add_meta_boxes', 'ecourier_tracking_add_meta_box' );
 function ecourier_tracking_html( $post) {
 	wp_nonce_field( '_ecourier_tracking_nonce', 'ecourier_tracking_nonce' ); ?>
 
-	<p>Tick this box if you delivered this order through eCourier.</p>
+	<p>Click Parcel Insert/View to insert parcel info or track delivery status.</p>
 
-	<p>
+	<?php add_thickbox(); ?>
 
-		<input type="checkbox" name="ecourier_tracking_delivered_through_ecourier" id="ecourier_tracking_delivered_through_ecourier" value="delivered-through-ecourier" <?php echo ( ecourier_tracking_get_meta( 'ecourier_tracking_delivered_through_ecourier' ) === 'delivered-through-ecourier' ) ? 'checked' : ''; ?>>
-		<label for="ecourier_tracking_delivered_through_ecourier"><?php _e( 'Delivered through eCourier', 'ecourier_tracking' ); ?></label>	</p><?php
+	<a href="#TB_inline?width=800&height=650&inlineId=ecourier_parcel_insert" class="thickbox">Parcel Insert/View</a>
+
+	<?php
+	add_filter('admin_footer','ecourier_parcel_insertion_form');
+
+	function ecourier_parcel_insertion_form(){
+	    global $pagenow,$typenow;   
+	    if (!in_array( $pagenow, array( 'post.php', 'post-new.php' )))
+	        return;
+	    global $post;
+	    $ecourier_order_id = $post->ID;
+	    $ecourier_order = wc_get_order($ecourier_order_id);
+
+		$ecourier_rec_name = $ecourier_order->get_shipping_first_name() . ' ' . $ecourier_order->get_shipping_last_name();
+		$ecourier_rec_mobile = $ecourier_order->get_billing_phone();
+		$ecourier_rec_state = 'Dhaka';
+		$ecourier_rec_city = $ecourier_order->get_shipping_city();
+		$ecourier_rec_address = $ecourier_order->get_shipping_address_1() . ' ' . $ecourier_order->get_shipping_address_2();
+		$ecourier_price_total = $ecourier_order->get_total();
+		$ecourier_order_id = $ecourier_order->get_id();
+
+		$ecourier_tracker_options = get_option( 'ecourier_tracker_option_name' );
+		$ecourier_api_key = $ecourier_tracker_options['api_key_0'];
+		$ecourier_secret_key = $ecourier_tracker_options['secret_key_1'];
+		$ecourier_user_id = $ecourier_tracker_options['user_id_2'];
+	?>
+	<div id="ecourier_parcel_insert" style="display:none;">
+
+	    <form method="POST" action="<?php echo plugin_dir_url( __FILE__ ); ?>ecourier-submit.php" id="ecourier-parcel-insert-submit">
+	    <?php 
+
+		$ecourier_admin_response = wp_remote_get( 
+			'https://ecourier.com.bd/apiv2/?parcel=track&product_id=' . $ecourier_order_id, 
+			array( 
+				'timeout' => 10, 
+				'headers' => array( 
+					'API_KEY' => $ecourier_api_key, 
+					'API_SECRET' => $ecourier_secret_key,
+					'USER_ID' => $ecourier_user_id,
+				),
+			));
+
+		$ecourier_admin_body = wp_remote_retrieve_body( $ecourier_admin_response );
+
+		$ecourier_admin_data = json_decode( $ecourier_admin_body, true );
+
+		$ecourier_admin_statuses = $ecourier_admin_data['query_data'][0]['status'];
+
+		?>
+
+		<?php 
+		if($ecourier_admin_data['query_data'] == 'No Data Found'){ ?>
+
+		
+			<p>
+			<label for="recipient_name">Recipient Name</label><br>
+	    	<input style="width: 100%;" type="text" name="recipient_name" id="recipient_name" value="<?php echo $ecourier_rec_name; ?>"><br>
+	    	</p>
+
+			<p>
+	    	<label for="recipient_mobile">Recipient Mobile</label><br>
+	    	<input style="width: 100%;" type="text" name="recipient_mobile" id="recipient_mobile" value="<?php echo $ecourier_rec_mobile; ?>"><br>
+	    	</p>
+
+			<p>
+	    	<label for="recipient_city">Recipient City</label><br>
+	    	<input style="width: 100%;" type="text" name="recipient_city" id="recipient_city" value="<?php echo $ecourier_rec_state; ?>"><br>
+	    	</p>
+	    	
+			<p>
+	    	<label for="recipient_area">Recipient Area</label><br>
+	    	<input style="width: 100%;" type="text" name="recipient_area" id="recipient_area" value="<?php echo $ecourier_rec_city; ?>"><br>
+	    	</p>
+	    	
+			<p>
+	    	<label for="recipient_address">Recipient Address</label><br>
+	    	<input style="width: 100%;" type="text" name="recipient_address" id="recipient_address" value="<?php echo $ecourier_rec_address; ?>"><br>
+	    	</p>
+	    	
+			<p>
+	    	<label for="product_price">Product Price</label><br>
+	    	<input style="width: 100%;" type="text" name="product_price" id="product_price" value="<?php echo $ecourier_price_total; ?>"><br>
+	    	</p>
+	    	
+			<p>
+	    	<label for="payment_method">Payment Method</label><br>
+	    	
+	    	<select name="payment_method" id="payment_method">
+			  <option value="COD">Cash on delivery</option>
+			  <option value="MPAY">Mobile Payment</option>
+			</select>
+	    	</p>
+
+	    	<input style="width: 100%;" type="hidden" name="product_id" id="product_id" value="<?php echo $ecourier_order_id; ?>">
+	    	<input style="width: 100%;" type="hidden" name="ecourier_api_key" id="ecourier_api_key" value="<?php echo $ecourier_api_key; ?>">
+	    	<input style="width: 100%;" type="hidden" name="ecourier_secret_key" id="ecourier_secret_key" value="<?php echo $ecourier_secret_key; ?>">
+	    	<input style="width: 100%;" type="hidden" name="ecourier_user_id" id="ecourier_user_id" value="<?php echo $ecourier_user_id; ?>">
+
+	    	<input class="button button-primary ecourier-submit-btn" type="submit">
+
+	    	<div id="ecourier-message"></div>
+
+	    <?php 
+		} else { ?>
+			<h2>Parcel Already Inserted</h2>
+			<table class="woocommerce-table shop_table gift_info">
+		    	<thead>
+					<th>Date</th>
+					<th>Status</th>
+					<th>Notes</th>
+				</thead>
+		        <tbody>
+					<?php foreach ($ecourier_admin_statuses as $ecourier_admin_status): ?>
+						<tr>
+							<td><?php echo $ecourier_admin_status[2]; ?></td>
+							<td><?php echo $ecourier_admin_status[0]; ?></td>
+							<td><?php echo $ecourier_admin_status[1]; ?></td>
+						</tr>
+					<?php endforeach; ?>
+		        </tbody>
+			</table>
+		<?php }
+		?>
+	    </form>
+	</div>
+	<?php
+	}
 }
+add_action('admin_enqueue_scripts', 'ecourier_tracker_js' );
 
-function ecourier_tracking_save( $post_id ) {
-	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
-	if ( ! isset( $_POST['ecourier_tracking_nonce'] ) || ! wp_verify_nonce( $_POST['ecourier_tracking_nonce'], '_ecourier_tracking_nonce' ) ) return;
-	if ( ! current_user_can( 'edit_post', $post_id ) ) return;
+function ecourier_tracker_js(){ 
+	wp_enqueue_script('ecourier-tracker', plugin_dir_url( __FILE__ ) . 'assets/ecourier-tracker.js', array('jquery'), '1.0', false);
+};
 
-	if ( isset( $_POST['ecourier_tracking_delivered_through_ecourier'] ) )
-		update_post_meta( $post_id, 'ecourier_tracking_delivered_through_ecourier', esc_attr( $_POST['ecourier_tracking_delivered_through_ecourier'] ) );
-	else
-		update_post_meta( $post_id, 'ecourier_tracking_delivered_through_ecourier', null );
-}
-add_action( 'save_post', 'ecourier_tracking_save' );
+
