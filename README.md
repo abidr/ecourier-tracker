@@ -24,7 +24,7 @@ Features:
 
 ### Installation
 
-Installing SCS Tracker is very easy!
+Installing eCourier Tracker is very easy!
 
 Manual Install:
 1. Unpack `ecourier-tracker.zip` and upload to the `/wp-content/plugins/` directory
