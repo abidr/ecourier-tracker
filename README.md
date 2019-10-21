@@ -50,6 +50,9 @@ It adds a tracking system for your customer to track their parcel if you sent it
 ![alt text](https://i.ibb.co/hB2h78h/image.png "Shows information about the order once its inserted")
 
 ## Changelog
+= 1.2 =
+* Added automatic payment method system.
+* Automatically complete orders if it shows delivered in eCourier tracking.
 
 = 1.0 =
 * Plugin Launched.
