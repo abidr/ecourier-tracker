@@ -37,11 +37,17 @@ It adds a tracking system for your customer to track their parcel if you sent it
 1. Tracker Interface
 
 == Changelog ==
+= 1.2 =
+* Added automatic payment method selection system.
+* Automatically complete orders based on tracking.
 
 = 1.0 =
 * Initial Release.
 
 == Upgrade Notice ==
+= 1.2 =
+* Added automatic payment method selection system.
+* Automatically complete orders based on tracking.
 
 = 1.0 =
 This is the Initial Release.
