@@ -93,7 +93,7 @@ $ecourier_data = json_decode( $ecourier_body, true );
 $ecourier_statuses = $ecourier_data['query_data'][0]['status'];
 
 ?>
-<?php if($ecourier_delivery_confirmation == true){ ?>
+<?php if($ecourier_data['query_data'] == 'No Data Found'){} else { ?>
 <br>
     <h2><?php echo __('eCourier Tracking', 'ecourier-tracker'); ?></h2>
     <?php
@@ -148,7 +148,7 @@ add_action( 'add_meta_boxes', 'ecourier_tracking_add_meta_box' );
 function ecourier_tracking_html( $post) {
 	wp_nonce_field( '_ecourier_tracking_nonce', 'ecourier_tracking_nonce' ); ?>
 
-	<p>Click Parcel Insert/View to insert parcel info or track delivery status.</p>
+	<p>Click Parcel Insert/View to insert parcel info or track delivery status. </p>
 
 	<?php add_thickbox(); ?>
 
@@ -172,6 +172,8 @@ function ecourier_tracking_html( $post) {
 		$ecourier_rec_address = $ecourier_order->get_shipping_address_1() . ' ' . $ecourier_order->get_shipping_address_2();
 		$ecourier_price_total = $ecourier_order->get_total();
 		$ecourier_order_id = $ecourier_order->get_id();
+		$ecourier_payment_method = $ecourier_order->get_payment_method();
+		$ecourier_order_status = $ecourier_order->get_status();
 
 		$ecourier_tracker_options = get_option( 'ecourier_tracker_option_name' );
 		$ecourier_api_key = $ecourier_tracker_options['api_key_0'];
@@ -184,7 +186,7 @@ function ecourier_tracking_html( $post) {
 	    <?php 
 
 		$ecourier_admin_response = wp_remote_get( 
-			'https://ecourier.com.bd/apiv2/?parcel=track&product_id=' . $ecourier_order_id, 
+			'https://ecourier.com.bd/apiv2/?parcel=track&product_id=' . $ecourier_order_id,
 			array( 
 				'timeout' => 10, 
 				'headers' => array( 
@@ -235,15 +237,16 @@ function ecourier_tracking_html( $post) {
 	    	<label for="product_price">Product Price</label><br>
 	    	<input style="width: 100%;" type="text" name="product_price" id="product_price" value="<?php echo $ecourier_price_total; ?>"><br>
 	    	</p>
-	    	
-			<p>
-	    	<label for="payment_method">Payment Method</label><br>
-	    	
-	    	<select name="payment_method" id="payment_method">
-			  <option value="COD">Cash on delivery</option>
-			  <option value="MPAY">Mobile Payment</option>
-			</select>
-	    	</p>
+			
+			<?php 
+			if($ecourier_payment_method == 'cod'){
+			?>			
+	    	<input style="width: 100%;" type="hidden" name="payment_method" id="payment_method" value="COD">			
+			<?php
+			} else {
+			?>
+	    	<input style="width: 100%;" type="hidden" name="payment_method" id="payment_method" value="MPAY">			
+			<?php }	?>
 
 	    	<input style="width: 100%;" type="hidden" name="product_id" id="product_id" value="<?php echo $ecourier_order_id; ?>">
 	    	<input style="width: 100%;" type="hidden" name="ecourier_api_key" id="ecourier_api_key" value="<?php echo $ecourier_api_key; ?>">
@@ -270,6 +273,17 @@ function ecourier_tracking_html( $post) {
 							<td><?php echo $ecourier_admin_status[0]; ?></td>
 							<td><?php echo $ecourier_admin_status[1]; ?></td>
 						</tr>
+					<?php 
+					if($ecourier_order_status == 'completed') {
+						echo '';
+					} else {
+						if (strpos($ecourier_admin_status[0], 'Delivered') !== false) {
+							$ecourier_order->update_status( 'completed' );
+						} else {
+							echo '';
+						}
+					}
+					?>
 					<?php endforeach; ?>
 		        </tbody>
 			</table>
